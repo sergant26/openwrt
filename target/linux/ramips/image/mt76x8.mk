@@ -1569,3 +1569,17 @@ define Device/yuncore_1200f
   DEVICE_PACKAGES := kmod-mt7615e kmod-mt7663-firmware-ap -kmod-mt76x2 -kmod-mt76x2-common -kmod-mt76x02-common
 endef
 TARGET_DEVICES += yuncore_1200f
+
+define Device/tuoshi_lt22m
+  IMAGE_SIZE := 15744k
+  DEVICE_VENDOR := Tuoshi
+  DEVICE_MODEL := LT22M 4G Wireless Router
+  DEVICE_PACKAGES := kmod-usb2 kmod-usb-ohci kmod-usb-net-rndis \
+    kmod-usb-serial-option uboot-envtools
+  UIMAGE_MAGIC := 0x27151967
+  UIMAGE_NAME := JBoneCloud M7628NNxCPET
+  FACTORY_IMAGE_SIZE := 15488k
+  IMAGES += factory.bin
+  IMAGE/factory.bin := append-kernel | pad-to 64k | append-roots | append-metadata
+endef
+TARGET_DEVICES += tuoshi_lt22m
