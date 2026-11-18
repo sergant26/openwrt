@@ -1,0 +1,207 @@
+dts-v1/;
+
+#include "mt7628an.dtsi"
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+#include <dt-bindings/leds/common.h>
+
+/ {
+	compatible = "tuoshi,lt22m", "mediatek,mt7628an-soc";
+	model = "Tuoshi LT22M 4G Wireless Router";
+
+	aliases {
+		led-boot = &led_power;
+		led-failsafe = &led_power;
+		led-running = &led_power;
+		led-upgrade = &led_power;
+	};
+
+	chosen {
+		bootargs = "console=ttyS0,57600";
+	};
+
+	memory@0 {
+		device_type = "memory";
+		reg = <0x0 0x4000000>;	/* 64 MiB */
+	};
+
+	keys {
+		compatible = "gpio-keys";
+
+		reset {
+			label = "reset";
+			gpios = <&gpio 38 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_RESTART>;
+		};
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		led_power: power {
+			function = LED_FUNCTION_POWER;
+			color = <LED_COLOR_ID_GREEN>;
+			gpios = <&gpio 4 GPIO_ACTIVE_LOW>;
+		};
+
+		wifi {
+			function = LED_FUNCTION_WLAN;
+			color = <LED_COLOR_ID_GREEN>;
+			gpios = <&gpio 43 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "phy0radio";
+		};
+
+		lan {
+			function = LED_FUNCTION_LAN;
+			color = <LED_COLOR_ID_GREEN>;
+			gpios = <&gpio 41 GPIO_ACTIVE_LOW>;
+		};
+
+		wan {
+			function = LED_FUNCTION_WAN;
+			color = <LED_COLOR_ID_GREEN>;
+			gpios = <&gpio 42 GPIO_ACTIVE_LOW>;
+		};
+
+		led_2g: lte-2g {
+			label = "2g";
+			gpios = <&gpio 37 GPIO_ACTIVE_LOW>;
+		};
+
+		led_3g: lte-3g {
+			label = "3g";
+			gpios = <&gpio 39 GPIO_ACTIVE_LOW>;
+		};
+
+		led_4g: lte-4g {
+			label = "4g";
+			gpios = <&gpio 40 GPIO_ACTIVE_LOW>;
+		};
+	};
+
+	usb_vbus: regulator-usb {
+		compatible = "regulator-fixed";
+		regulator-name = "usb_vbus";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&gpio 11 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
+};
+
+&state_default {
+	gpio {
+		groups = "i2c", "refclk", "wdt", "wled_an", "uart1", "p0led_an",
+			 "p1led_an", "p2led_an", "p3led_an", "p4led_an";
+		function = "gpio";
+	};
+};
+
+&pinctrl {
+	uart1_pins: uart1 {
+		groups = "uart1";
+		function = "uart1";
+	};
+};
+
+&spi0 {
+	status = "okay";
+
+	flash@0 {
+		compatible = "jedec,spi-nor";
+		reg = <0>;
+		spi-max-frequency = <40000000>;
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			partition@0 {
+				label = "u-boot";
+				reg = <0x0 0x30000>;
+				read-only;
+			};
+
+			partition@30000 {
+				label = "u-boot-env";
+				reg = <0x30000 0x10000>;
+			};
+
+			partition@40000 {
+				label = "factory";
+				reg = <0x40000 0x10000>;
+				read-only;
+
+				nvmem-layout {
+					compatible = "fixed-layout";
+					#address-cells = <1>;
+					#size-cells = <1>;
+
+					eeprom_factory_0: eeprom@0 {
+						reg = <0x0 0x400>;
+					};
+
+					macaddr_factory_28: macaddr@28 {
+						compatible = "mac-base";
+						reg = <0x28 0x6>;
+						#nvmem-cell-cells = <1>;
+					};
+				};
+			};
+
+			partition@50000 {
+				compatible = "denx,uimage";
+				label = "firmware";
+				reg = <0x50000 0xf70000>;	/* 15.44 MiB */
+			};
+
+			partition@fc0000 {
+				label = "stock-storage";
+				reg = <0xfc0000 0x40000>;
+				read-only;
+			};
+		};
+	};
+};
+
+&ethernet {
+	nvmem-cells = <&macaddr_factory_28 0>;
+	nvmem-cell-names = "mac-address";
+
+	port@0 {
+		reg = <0>;
+		label = "lan1";
+	};
+
+	port@1 {
+		reg = <1>;
+		label = "wan0";
+	};
+};
+
+&esw {
+	mediatek,portmap = <0x2>;	/* LAN0+LAN1 -> switch, WAN отдельно */
+};
+
+&wmac {
+	status = "okay";
+	nvmem-cells = <&eeprom_factory_0>;
+	nvmem-cell-names = "eeprom";
+};
+
+&usb {
+	status = "okay";
+	vbus-supply = <&usb_vbus>;
+};
+
+&usbphy {
+	status = "okay";
+};
+
+&uart1 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart1_pins>;
+};
